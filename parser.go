@@ -1,9 +1,10 @@
 package gohtml
 
 import (
-	"golang.org/x/net/html"
 	"io"
 	"strings"
+
+	"golang.org/x/net/html"
 )
 
 // parse parses a stirng and converts it into an html.
@@ -23,6 +24,13 @@ func parseToken(tokenizer *html.Tokenizer, htmlDoc *htmlDocument, parent *tagEle
 	switch tokenType {
 	case html.ErrorToken:
 		return true, false, ""
+	case html.CommentToken:
+		// Remove all comments except Internet Explorer Conditionals
+		raw := string(tokenizer.Raw())
+		if strings.Contains(raw, "[if ") {
+			textElement := &textElement{text: raw}
+			appendElement(htmlDoc, parent, textElement)
+		}
 	case html.TextToken:
 		text := string(tokenizer.Raw())
 		text = strings.TrimSpace(text)
@@ -51,7 +59,7 @@ func parseToken(tokenizer *html.Tokenizer, htmlDoc *htmlDocument, parent *tagEle
 		}
 	case html.EndTagToken:
 		return false, true, setEndTagRaw(tokenizer, parent, getTagName(tokenizer))
-	case html.DoctypeToken, html.SelfClosingTagToken, html.CommentToken:
+	case html.DoctypeToken, html.SelfClosingTagToken:
 		tagElement := &tagElement{tagName: getTagName(tokenizer), startTagRaw: string(tokenizer.Raw())}
 		appendElement(htmlDoc, parent, tagElement)
 	}
